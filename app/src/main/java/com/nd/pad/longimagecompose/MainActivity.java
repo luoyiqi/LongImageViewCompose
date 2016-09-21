@@ -58,11 +58,17 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     // 显示进度条
     private ProgressDialog mAlertDialog;
 
+    // 监听文件夹变化
+    private MyFileObserver myFileObserver;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        myFileObserver = new MyFileObserver(FileSystem.PATH + File.separator + "长图生成器");
+        myFileObserver.startWatching();
 
         EventBus.getDefault().register(this);
 
@@ -250,6 +256,7 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     public void onMessageEvent(UIMessage msg) {
         endMake(msg.name);
 
+
     }
 
     @Override
@@ -272,5 +279,11 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        myFileObserver.stopWatching();
     }
 }
