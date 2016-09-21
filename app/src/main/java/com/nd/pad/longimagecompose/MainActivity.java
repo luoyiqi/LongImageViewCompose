@@ -248,9 +248,7 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onMessageEvent(UIMessage msg) {
-        // 开始合成
-        List<String> paths = msg.paths;
-
+        endMake(msg.name);
 
     }
 
