@@ -1,31 +1,244 @@
 package com.nd.pad.longimagecompose;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+import com.chad.library.adapter.base.BaseQuickAdapter;
+import com.chad.library.adapter.base.listener.OnItemClickListener;
+import com.chad.library.adapter.base.listener.OnItemLongClickListener;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import me.nereo.multi_image_selector.MultiImageSelector;
+import me.nereo.multi_image_selector.MultiImageSelectorActivity;
+import rx.Observable;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
+
+public class MainActivity extends AppCompatActivity implements FileSystem.OnMakeListener{
+
+    // 制作长图的按钮
+    private FloatingActionButton fab_add;
+
+    private Toolbar toolbar;
+
+
+    /**
+     * 和列表视图相关
+     *
+     */
+    private RecyclerView mRecyclerView;
+    private RecyclerView.LayoutManager mLayoutManager;
+    private QuickAdapter mAdapter;
+
+    // 显示进度条
+    private ProgressDialog mAlertDialog;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        EventBus.getDefault().register(this);
+
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+
+        // 交互提示dialog//////////////////////////////
+        mAlertDialog=new ProgressDialog(MainActivity.this);
+        mAlertDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        mAlertDialog.setTitle("提示");
+        mAlertDialog.setMessage("图片正在制作中，请不要退出应用~");
+        mAlertDialog.setIcon(R.drawable.icon);
+        mAlertDialog.setCancelable(false);
+
+
+        //---------         --------
+        fab_add=(FloatingActionButton)findViewById(R.id.fab);
+        fab_add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                ObjectAnimator oba=ObjectAnimator.ofFloat(fab_add,"rotation",0f,90f);
+                oba.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        // 跳转到长图制作的界面
+                        MultiImageSelector.create()
+                                .showCamera(false)
+                                .start(MainActivity.this,474);
+
+                    }
+                });
+                oba.start();
+
+
             }
         });
+
+
+        // 列表初始化
+        mRecyclerView=(RecyclerView)findViewById(R.id.rv);
+        mLayoutManager= new StaggeredGridLayoutManager(2,StaggeredGridLayoutManager.VERTICAL);
+        mAdapter=new QuickAdapter();
+        mAdapter.openLoadAnimation(BaseQuickAdapter.SLIDEIN_LEFT);
+        mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.setAdapter(mAdapter);
+
+
+        // 从本地文件夹加载图片并且显示出来(本地图片的名字就是要在底部显示的内容)
+        Observable.just(1)
+                .map(new Func1<Integer, List<String>>() {
+
+                    @Override
+                    public List<String> call(Integer integer) {
+                        FileSystem  fs=FileSystem.getInstance();
+                        List<String> path=fs.getAllImgs();
+
+                        return path;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<List<String>>() {
+                    @Override
+                    public void call(List<String> strings) {
+                        mAdapter.addData(strings);
+                    }
+                });
+
+       //---------   图片点击事件，图片长按事件~    --------
+        mRecyclerView.addOnItemTouchListener(new OnItemClickListener() {
+            @Override
+            public void SimpleOnItemClick(BaseQuickAdapter baseQuickAdapter, View view, int i) {
+
+                Intent intent=new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.parse("file://"+baseQuickAdapter.getItem(i)),"image/*");
+                startActivity(intent);
+
+
+            }
+        });
+
+        mRecyclerView.addOnItemTouchListener(new OnItemLongClickListener() {
+            @Override
+            public void SimpleOnItemLongClick(BaseQuickAdapter baseQuickAdapter, View view, int i) {
+
+
+
+
+                // 本地文件中删除
+                if(baseQuickAdapter.getItemCount()>i){
+                    File file=new File((String)baseQuickAdapter.getItem(i));
+                    if(file.exists()){
+                        file.delete();
+                    }
+                }
+                // 长按触发删除操作
+                // recyclerview中删除
+                baseQuickAdapter.remove(i);
+            }
+        });
+
+
+
+
+    }
+
+    @Override
+    public void startMake() {
+        // 开始制作
+        Toast.makeText(MainActivity.this, "start make", Toast.LENGTH_SHORT).show();
+        mAlertDialog.show();
+    }
+
+    @Override
+    public void endMake(String path) {
+        // 制作完成
+        List<String> s=new ArrayList<>();
+        s.add(path);
+        mAdapter.addData(s);
+        mAlertDialog.setMessage("图片制作好了~");
+        mAlertDialog.dismiss();
+
+    }
+
+    // 拦截退出按钮
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if(keyCode==KeyEvent.KEYCODE_BACK){
+            AlertDialog alert=new AlertDialog.Builder(MainActivity.this)
+                    .setIcon(R.drawable.icon)
+                    .setTitle("提示")
+                    .setMessage("确认要退出应用吗？")
+                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            finish();
+                        }
+                    })
+                    .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+
+                        }
+                    })
+                    .create();
+            alert.show();
+
+
+
+        }
+
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==474&&resultCode==RESULT_OK){
+            List<String> paths=data.getStringArrayListExtra(MultiImageSelectorActivity.EXTRA_RESULT);
+            FileSystem.getInstance().setMakeListener(this);
+            FileSystem.getInstance().composeImages(paths);
+        }
+
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onMessageEvent(UIMessage msg){
+        // 开始合成
+        List<String> paths=msg.paths;
+
+
+
+
     }
 
     @Override
