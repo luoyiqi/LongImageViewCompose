@@ -29,7 +29,6 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 import me.nereo.multi_image_selector.MultiImageSelector;
@@ -68,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         setContentView(R.layout.activity_main);
 
         myFileObserver = new MyFileObserver(FileSystem.PATH + File.separator + "长图生成器");
-        myFileObserver.startWatching();
+//        myFileObserver.startWatching();
 
         EventBus.getDefault().register(this);
 
@@ -87,26 +86,21 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
         //---------         --------
         fab_add = (FloatingActionButton) findViewById(R.id.fab);
-        fab_add.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ObjectAnimator oba = ObjectAnimator.ofFloat(fab_add, "rotation", 0f, 90f);
-                oba.addListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        super.onAnimationEnd(animation);
-                        // 跳转到长图制作的界面
-                        MultiImageSelector.create()
-                                .showCamera(false)
-                                .start(MainActivity.this, 474);
-
-                    }
-                });
-                oba.start();
-
-
-            }
-        });
+        fab_add.setOnClickListener(view -> {
+                    ObjectAnimator oba = ObjectAnimator.ofFloat(fab_add, "rotation", 0f, 90f);
+                    oba.addListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            super.onAnimationEnd(animation);
+//                             跳转到长图制作的界面
+                            MultiImageSelector.create()
+                                    .showCamera(false)
+                                    .start(MainActivity.this, 474);
+                        }
+                    });
+                    oba.start();
+                }
+        );
 
 
         // 列表初始化
@@ -189,8 +183,6 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
             }
         });
-
-
     }
 
 
@@ -198,17 +190,21 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     public void startMake() {
         // 开始制作
         Toast.makeText(MainActivity.this, "start make", Toast.LENGTH_SHORT).show();
-        mAlertDialog.show();
+//        mAlertDialog.show();
+
+
     }
 
     @Override
     public void endMake(String path) {
         // 制作完成
-        List<String> s = new ArrayList<>();
-        s.add(path);
-        mAdapter.addData(s);
-        mAlertDialog.setMessage("图片制作好了~");
-        mAlertDialog.dismiss();
+//        List<String> s = new ArrayList<>();
+//        s.add(path);
+//        mAdapter.addData(s);
+//        mAlertDialog.setMessage("图片制作好了~");
+//        mAlertDialog.dismiss();
+
+        Toast.makeText(MainActivity.this, "制作完成~", Toast.LENGTH_SHORT).show();
 
     }
 
@@ -284,6 +280,6 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        myFileObserver.stopWatching();
+//        myFileObserver.stopWatching();
     }
 }
