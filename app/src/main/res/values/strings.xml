@@ -2,4 +2,11 @@
     <string name="app_name">长图</string>
     <string name="action_settings">Settings</string>
     <string name="advice">反馈bug或建议</string>
+    <string name="note">提示</string>
+    <string name="sure">确定</string>
+    <string name="cancel">取消</string>
+    <string name="msg">是否删除当前选中的图片？</string>
+    <string name="success">制作完成</string>
+    <string name="failure">制作失败</string>
+    <string name="exit">确定要退出应用吗？</string>
 </resources>

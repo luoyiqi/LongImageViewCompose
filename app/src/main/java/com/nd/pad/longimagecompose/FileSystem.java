@@ -21,6 +21,9 @@ import java.util.Random;
 /**
  * 该类用于处理文件系统和图片交互
  *
+ *
+ * 使用inSampleSize来缩放十分不可靠！！
+ *
  * @author hustdhg
  * @since 2016/09/21
  */
@@ -31,6 +34,8 @@ public class FileSystem {
     private static FileSystem dot;
 
     public static final String PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
+
+    public static final String DIR_NAME="longimage";
 
     private FileSystem() {
 
@@ -105,21 +110,25 @@ public class FileSystem {
 
 
         new Thread(() -> {
-            List<Bitmap> targets = new ArrayList<>();
 
+
+            /// 把bitmap转换成目标大小
+            List<Bitmap> targets = new ArrayList<>();
             for (int i = 0; i < paths.size(); i++) {
                 BitmapFactory.Options op = new BitmapFactory.Options();
                 op.inJustDecodeBounds = true;
                 Bitmap bt = BitmapFactory.decodeFile(paths.get(i), op);
-                float scale = op.outWidth * 1.0f / w;
-                Log.d("tag", "scale:" + scale);
-                op.inSampleSize = (int) scale;
-                op.inJustDecodeBounds = false;
-                targets.add(BitmapFactory.decodeFile(paths.get(i), op));
-
+                int temp_width=op.outWidth;
+                int temp_height=op.outHeight;
+                float scale = temp_width * 1.0f / w;
+                op.inJustDecodeBounds=false;
+                Bitmap temp=getScaledBitmap(BitmapFactory.decodeFile(paths.get(i),op),(int)w,(int)(w*temp_height/temp_width));
+                targets.add(temp);
             }
-            int temp_height=0;
-            int total_height=0;
+
+
+            int temp_height=0;// 计数高度
+            int total_height=0; //总高度
             for(int i=0;i<targets.size();i++){
                 total_height+=targets.get(i).getHeight();
             }
@@ -138,7 +147,7 @@ public class FileSystem {
 
 
             // 保存到本地，并且更新recyclerViewd视图
-            File file_dir=new File(PATH,"longimage");
+            File file_dir=new File(PATH,DIR_NAME);
             final String name= System.currentTimeMillis()+new Random().nextInt(100)+".jpg";
             File newfile=new File(file_dir,name);
             if(!newfile.exists()){
@@ -159,100 +168,27 @@ public class FileSystem {
         }).start();
 
 
-//        Observable.from(paths)
-//                .map(new Func1<String, Bitmap>() {
-//                    @Override
-//                    public Bitmap call(String s) {
-//
-//
-//
-//                        // 在这里就把bitmap缩放成标准格式
-//                        BitmapFactory.Options op=new BitmapFactory.Options();
-//                        op.inJustDecodeBounds=true;
-//                        Bitmap bt=BitmapFactory.decodeFile(s,op);
-//                        float scale=op.outWidth*1.0f/w;
-//                        Log.d("tag","scale:"+scale);
-//
-//                        op.inSampleSize=(int)scale;
-//                        op.inJustDecodeBounds=false;
-//
-//
-//
-//                        return BitmapFactory.decodeFile(s,op);
-//
-//
-//                    }
-//                })
-//                .buffer(paths.size())
-//                .map(new Func1<List<Bitmap>, Bitmap>() {
-//
-//                    @Override
-//                    public Bitmap call(List<Bitmap> bitmaps) {
-//                        // 在这里合成图片
-//                        int temp_height=0;
-//                        int height=0;
-//                        for(int i=0;i<bitmaps.size();i++){
-//
-//                            height+=bitmaps.get(i).getHeight();
-//                        }
-//                        Log.d("tag","总height为"+height);
-//                        Bitmap final_bitmap=Bitmap.createBitmap((int)w,height, Bitmap.Config.RGB_565);
-//                        Canvas  canvas=new Canvas(final_bitmap);
-//
-//                        for(int j=0;j<bitmaps.size();j++){
-//
-//                            Bitmap n=bitmaps.get(j);
-//                            canvas.drawBitmap(n,0,temp_height,null);
-//                            temp_height+=n.getHeight();
-//
-//
-//                        }
-//                        canvas.save(Canvas.ALL_SAVE_FLAG);
-//                        for(Bitmap b:bitmaps){
-//                            b.recycle();
-//                        }
-//
-//
-//                        return final_bitmap;
-//                    }
-//                })
-//                .subscribeOn(Schedulers.io())
-//                .observeOn(AndroidSchedulers.mainThread())
-//                .subscribe(new Action1<Bitmap>() {
-//                    @Override
-//                    public void call(Bitmap bitmap) {
-//                        // 保存到本地，并且更新recyclerViewd视图
-//                        File file_dir=new File(PATH,"长图生成器");
-//                        final String name= System.currentTimeMillis()+new Random().nextInt(100)+".jpg";
-//                        File newfile=new File(file_dir,name);
-//                        if(!newfile.exists()){
-//                            try {
-//                                BufferedOutputStream bos=new BufferedOutputStream(new FileOutputStream(newfile));
-//                                bitmap.compress(Bitmap.CompressFormat.JPEG,30,bos);
-//                                bos.flush();
-//                                bos.close();
-//
-//                            } catch (FileNotFoundException e) {
-//                                e.printStackTrace();
-//                            }catch (IOException e ){
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    }
-//                });
+
+
 
 
     }
 
+    private Bitmap getScaledBitmap(Bitmap b,int dstWidth,int dstHeight){
+        return Bitmap.createScaledBitmap(b,dstWidth,dstHeight,false);
+
+    }
+
+
     private float getWidth(List<String> paths) {
 
-        if (paths.size() <= 3) {
+        if (paths.size() <= 4) {
             BitmapFactory.Options bo = new BitmapFactory.Options();
             bo.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(paths.get(0), bo);
             return bo.outWidth;
 
-        } else if (paths.size() < 6) {
+        } else if (paths.size() <= 7) {
             return 1280;
 
         } else {

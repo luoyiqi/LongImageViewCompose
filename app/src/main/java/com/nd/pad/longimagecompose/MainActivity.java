@@ -14,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -29,6 +30,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 
 import me.nereo.multi_image_selector.MultiImageSelector;
@@ -66,8 +68,8 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        myFileObserver = new MyFileObserver(FileSystem.PATH + File.separator + "长图生成器");
-//        myFileObserver.startWatching();
+        myFileObserver = new MyFileObserver(FileSystem.PATH + File.separator + FileSystem.DIR_NAME);
+        myFileObserver.startWatching();
 
         EventBus.getDefault().register(this);
 
@@ -82,6 +84,8 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         mAlertDialog.setMessage("图片正在制作中，请不要退出应用~");
         mAlertDialog.setIcon(R.drawable.icon);
         mAlertDialog.setCancelable(false);
+
+        Log.d("tag","test");
 
 
         //---------         --------
@@ -112,26 +116,6 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         mRecyclerView.setAdapter(mAdapter);
 
 
-        // 从本地文件夹加载图片并且显示出来(本地图片的名字就是要在底部显示的内容)
-        Observable.just(1)
-                .map(new Func1<Integer, List<String>>() {
-
-                    @Override
-                    public List<String> call(Integer integer) {
-                        FileSystem fs = FileSystem.getInstance();
-                        List<String> path = fs.getAllImgs();
-
-                        return path;
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Action1<List<String>>() {
-                    @Override
-                    public void call(List<String> strings) {
-                        mAdapter.addData(strings);
-                    }
-                });
 
         //---------   图片点击事件，图片长按事件~    --------
         mRecyclerView.addOnItemTouchListener(new OnItemClickListener() {
@@ -146,16 +130,18 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
             }
         });
 
+        loadData();
+
         mRecyclerView.addOnItemTouchListener(new OnItemLongClickListener() {
             @Override
             public void SimpleOnItemLongClick(final BaseQuickAdapter baseQuickAdapter, View view, int i) {
 
 
                 AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("提示:")
-                        .setMessage("是否要删除当前选中照片?")
+                        .setTitle(R.string.note)
+                        .setMessage(R.string.msg)
                         .setIcon(R.drawable.icon)
-                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                        .setPositiveButton(R.string.sure, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 // 本地文件中删除
@@ -171,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
                             }
                         })
-                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
 
@@ -190,21 +176,49 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     public void startMake() {
         // 开始制作
         Toast.makeText(MainActivity.this, "start make", Toast.LENGTH_SHORT).show();
-//        mAlertDialog.show();
+        mAlertDialog.show();
+
+
+    }
+
+    /**
+     *加载数据
+     *
+     */
+    private void loadData(){
+        // 从本地文件夹加载图片并且显示出来(本地图片的名字就是要在底部显示的内容)
+        Observable.just(1)
+                .map(new Func1<Integer, List<String>>() {
+
+                    @Override
+                    public List<String> call(Integer integer) {
+                        FileSystem fs = FileSystem.getInstance();
+                        List<String> path = fs.getAllImgs();
+                        Collections.reverse(path);
+                        return path;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<List<String>>() {
+                    @Override
+                    public void call(List<String> strings) {
+                        mAdapter.setNewData(strings);
+                    }
+                });
 
 
     }
 
     @Override
     public void endMake(String path) {
-        // 制作完成
-//        List<String> s = new ArrayList<>();
-//        s.add(path);
-//        mAdapter.addData(s);
-//        mAlertDialog.setMessage("图片制作好了~");
-//        mAlertDialog.dismiss();
+//         制作完成
 
-        Toast.makeText(MainActivity.this, "制作完成~", Toast.LENGTH_SHORT).show();
+        loadData();
+        mAlertDialog.setMessage("图片制作好了~");
+        mAlertDialog.dismiss();
+
+        Toast.makeText(MainActivity.this, R.string.success, Toast.LENGTH_SHORT).show();
 
     }
 
@@ -214,15 +228,15 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             AlertDialog alert = new AlertDialog.Builder(MainActivity.this)
                     .setIcon(R.drawable.icon)
-                    .setTitle("提示")
-                    .setMessage("确认要退出应用吗？")
-                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    .setTitle(R.string.note)
+                    .setMessage(R.string.exit)
+                    .setPositiveButton(R.string.sure, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
                             finish();
                         }
                     })
-                    .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
 
@@ -280,6 +294,6 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     @Override
     protected void onDestroy() {
         super.onDestroy();
-//        myFileObserver.stopWatching();
+        myFileObserver.stopWatching();
     }
 }
