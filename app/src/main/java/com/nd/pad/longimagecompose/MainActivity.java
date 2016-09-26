@@ -6,9 +6,12 @@ import android.animation.ObjectAnimator;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -19,6 +22,8 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -33,6 +38,9 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
+import co.mobiwise.materialintro.shape.Focus;
+import co.mobiwise.materialintro.shape.FocusGravity;
+import co.mobiwise.materialintro.view.MaterialIntroView;
 import me.nereo.multi_image_selector.MultiImageSelector;
 import me.nereo.multi_image_selector.MultiImageSelectorActivity;
 import rx.Observable;
@@ -80,29 +88,32 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         // 交互提示dialog//////////////////////////////
         mAlertDialog = new ProgressDialog(MainActivity.this);
         mAlertDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        mAlertDialog.setTitle("提示");
-        mAlertDialog.setMessage("图片正在制作中，请不要退出应用~");
+        mAlertDialog.setTitle(R.string.note);
+        mAlertDialog.setMessage(getResources().getString(R.string.notexit));
         mAlertDialog.setIcon(R.drawable.icon);
         mAlertDialog.setCancelable(false);
 
-        Log.d("tag","test");
+        Log.d("tag", "test");
 
 
         //---------         --------
         fab_add = (FloatingActionButton) findViewById(R.id.fab);
         fab_add.setOnClickListener(view -> {
                     ObjectAnimator oba = ObjectAnimator.ofFloat(fab_add, "rotation", 0f, 90f);
+                    oba.setInterpolator(new LinearInterpolator());
                     oba.addListener(new AnimatorListenerAdapter() {
                         @Override
                         public void onAnimationEnd(Animator animation) {
                             super.onAnimationEnd(animation);
-//                             跳转到长图制作的界面
+                            //跳转到长图制作的界面
                             MultiImageSelector.create()
                                     .showCamera(false)
                                     .start(MainActivity.this, 474);
                         }
                     });
                     oba.start();
+
+
                 }
         );
 
@@ -114,7 +125,6 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         mAdapter.openLoadAnimation(BaseQuickAdapter.SLIDEIN_LEFT);
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mAdapter);
-
 
 
         //---------   图片点击事件，图片长按事件~    --------
@@ -134,8 +144,8 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
         mRecyclerView.addOnItemTouchListener(new OnItemLongClickListener() {
             @Override
-            public void SimpleOnItemLongClick(final BaseQuickAdapter baseQuickAdapter, View view, int i) {
-
+            public void SimpleOnItemLongClick(final BaseQuickAdapter baseQuickAdapter, View view, final int i) {
+                int position = i;
 
                 AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
                         .setTitle(R.string.note)
@@ -146,14 +156,14 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 // 本地文件中删除
                                 if (baseQuickAdapter.getItemCount() > i) {
-                                    File file = new File((String) baseQuickAdapter.getItem(i));
+                                    File file = new File((String) baseQuickAdapter.getItem(position));
                                     if (file.exists()) {
                                         file.delete();
                                     }
                                 }
-                                // 长按触发删除操作
-                                // recyclerview中删除
-                                baseQuickAdapter.remove(i);
+                                // 重新加载布局
+                                loadData();
+                                Snackbar.make(mRecyclerView, R.string.delSuccess, Snackbar.LENGTH_SHORT).show();
 
                             }
                         })
@@ -169,6 +179,34 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 
             }
         });
+
+//        checkForFirst();
+
+
+    }
+
+    // 检查是否是第一次启动应用
+    private void checkForFirst() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+        if (sp.getBoolean("isFirst", true)) {
+            new MaterialIntroView.Builder(this)
+                    .enableDotAnimation(true)
+                    .enableIcon(false)
+                    .setFocusGravity(FocusGravity.CENTER)
+                    .setFocusType(Focus.MINIMUM)
+                    .setDelayMillis(500)
+                    .enableFadeAnimation(true)
+                    .performClick(true)
+                    .setInfoText(getResources().getString(R.string.toast))
+                    .setTarget(fab_add)
+                    .setUsageId("intro_card") //THIS SHOULD BE UNIQUE ID
+                    .show();
+
+            sp.edit().putBoolean("isFirst", false).apply();
+
+        }
+
+
     }
 
 
@@ -182,10 +220,9 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
     }
 
     /**
-     *加载数据
-     *
+     * 加载数据
      */
-    private void loadData(){
+    private void loadData() {
         // 从本地文件夹加载图片并且显示出来(本地图片的名字就是要在底部显示的内容)
         Observable.just(1)
                 .map(new Func1<Integer, List<String>>() {
@@ -203,7 +240,14 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
                 .subscribe(new Action1<List<String>>() {
                     @Override
                     public void call(List<String> strings) {
-                        mAdapter.setNewData(strings);
+                        if (strings.size() == 0) {
+                            ImageView imageView = new ImageView(MainActivity.this);
+                            imageView.setImageResource(R.drawable.welcome);
+                            mAdapter.setEmptyView(imageView);
+                        } else {
+                            mAdapter.setNewData(strings);
+
+                        }
                     }
                 });
 
@@ -215,7 +259,7 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
 //         制作完成
 
         loadData();
-        mAlertDialog.setMessage("图片制作好了~");
+        mAlertDialog.setMessage(getResources().getString(R.string.finish));
         mAlertDialog.dismiss();
 
         Toast.makeText(MainActivity.this, R.string.success, Toast.LENGTH_SHORT).show();
@@ -286,7 +330,15 @@ public class MainActivity extends AppCompatActivity implements FileSystem.OnMake
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
+        } else if (id == R.id.advice) {
+
+
+        } else {
+            // id ==R.id.note
+
+
         }
+
 
         return super.onOptionsItemSelected(item);
     }

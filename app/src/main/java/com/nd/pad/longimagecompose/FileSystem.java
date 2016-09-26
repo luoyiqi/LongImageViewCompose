@@ -14,9 +14,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 /**
  * 该类用于处理文件系统和图片交互
@@ -72,15 +73,19 @@ public class FileSystem {
         }
         File[] files = file.listFiles();
 
-        for (File f : files) {
-            if (!f.isDirectory() && (f.getName().endsWith(".jpg") || f.getName().endsWith(".png"))) {
-                list.add(f.getAbsolutePath());
+        if(files.length!=0){
+            for (File f : files) {
+                if (!f.isDirectory() && (f.getName().endsWith(".jpg") || f.getName().endsWith(".png"))) {
+                    list.add(f.getAbsolutePath());
+
+                }
 
             }
 
         }
-
         return list;
+
+
     }
 
     /**
@@ -148,7 +153,8 @@ public class FileSystem {
 
             // 保存到本地，并且更新recyclerViewd视图
             File file_dir=new File(PATH,DIR_NAME);
-            final String name= System.currentTimeMillis()+new Random().nextInt(100)+".jpg";
+            SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            final String name= sdf.format(new Date())+".jpg";
             File newfile=new File(file_dir,name);
             if(!newfile.exists()){
                 try {

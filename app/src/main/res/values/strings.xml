@@ -9,4 +9,9 @@
     <string name="success">制作完成</string>
     <string name="failure">制作失败</string>
     <string name="exit">确定要退出应用吗？</string>
+    <string name="notexit">图片正在制作中，请不要退出应用~</string>
+    <string name="finish">图片制作完成~</string>
+    <string name="delSuccess">删除成功~</string>
+    <string name="toast">长按删除图片~</string>
+    <string name="fab_add">点击制作图片~</string>
 </resources>

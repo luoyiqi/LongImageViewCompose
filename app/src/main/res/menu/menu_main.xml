@@ -8,9 +8,14 @@
         android:title="@string/action_settings"
         app:showAsAction="never" />
     <item
+        android:icon="@drawable/ic_feedback_white_24dp"
         android:id="@+id/advice"
         android:title="@string/advice"
-        app:showAsAction="never"/>
+        app:showAsAction="always"/>
+    <item android:icon="@drawable/ic_event_available_white_24dp"
+        android:id="@+id/note"
+        android:title="提示"
+        app:showAsAction="always"/>
 
 
 </menu>
